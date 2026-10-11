@@ -12,6 +12,10 @@
 set -uo pipefail
 cd "$(dirname "$0")" || exit 1
 
+# ★ 从 GitHub 拿下来的文件**没有可执行位**（走 API/网页下载都一样）。
+#   所以自己先把这一堆脚本补上 +x，不然下面 ./frame/window/install.sh 调不动。
+chmod +x ./frame/window/*.sh ./frame/window/*.command ./frame/*.sh 2>/dev/null || true
+
 cat <<'BANNER'
 
   ╭──────────────────────────────────────────╮
