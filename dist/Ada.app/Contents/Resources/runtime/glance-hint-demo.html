@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="embed">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glance-Hint · 阿达 · 概念演示</title>
+<style>
+  :root{
+    --ink:#1C1C1E; --shirt:#FFFFFF; --paper:#F7F1E3; --line:#DCD2BC;
+    --draft:#F0E6CE; --skin:#F6D9C4; --skin2:#E8BFA6;
+    --wood:#C8A97E; --wood2:#AE8C60; --bg:#F7F3EA;
+    --ok:#7BAE7F; --warn:#E0A458; --err:#C1624F; --stop:#8A8A8E;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:#EDE7DA;color:#2B2B2E;padding:20px 14px 34px;
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+  }
+  header{text-align:center}
+  h1{margin:0;font-size:13px;font-weight:600;letter-spacing:.26em;color:#7A7263}
+  header p{margin:4px 0 0;font-size:12px;color:#9A9184;letter-spacing:.06em}
+
+  .stage{
+    width:min(86vw,460px);aspect-ratio:1/1;border-radius:16px;overflow:hidden;
+    background:var(--bg);box-shadow:0 10px 30px rgba(70,58,36,.16), 0 1px 0 rgba(255,255,255,.7) inset;
+  }
+  svg{display:block;width:100%;height:100%}
+
+  .caption{
+    width:min(86vw,460px);min-height:54px;text-align:center;font-size:14px;color:#5D5648;
+    background:rgba(255,255,255,.62);border-radius:12px;padding:10px 14px;
+  }
+  .caption b{font-weight:600;color:#2B2B2E}
+  .caption .why{display:block;font-size:12.5px;color:#8C8474;margin-top:3px}
+
+  .pad{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:min(92vw,520px)}
+  button{
+    font:inherit;font-size:13.5px;padding:8px 14px;border-radius:999px;cursor:pointer;
+    border:1px solid #CFC6B4;background:#FFFDF8;color:#4A4438;transition:.16s;
+  }
+  button:hover{border-color:#A99C84;transform:translateY(-1px)}
+  button[aria-pressed="true"]{background:#2B2B2E;color:#FBF8F1;border-color:#2B2B2E}
+
+  .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
+  .row label{font-size:12.5px;color:#8C8474;display:flex;align-items:center;gap:7px}
+  input[type=range]{width:110px;accent-color:#7A7263}
+  #auto{border-color:#2B2B2E;background:#2B2B2E;color:#FBF8F1}
+  #auto:hover{opacity:.88}
+
+  footer{width:min(86vw,460px);font-size:11.5px;line-height:1.75;color:#9A9184;text-align:center;margin-top:2px}
+  footer em{font-style:normal;color:#7A7263}
+
+  /* ============ 可动部件：旋转/缩放的支点 ============ */
+  #ada    {transform-box:view-box; transform-origin:240px 384px}
+  #head   {transform-box:view-box; transform-origin:240px 248px}
+  #eyes   {transform-box:view-box; transform-origin:240px 186px}
+  #glasses{transform-box:view-box; transform-origin:240px 186px}
+  #armL   {transform-box:view-box; transform-origin:202px 276px}
+  #armR   {transform-box:view-box; transform-origin:278px 276px}
+  #pencil {transform-box:view-box; transform-origin:272px 342px}
+  #eraser {transform-box:view-box; transform-origin:340px 326px}
+  #paperWrap{transform-box:view-box; transform-origin:240px 330px}
+  #stackSmall,#stackBig{transform-box:view-box; transform-origin:372px 320px}
+  #eraser,#stackSmall,#stackBig,#crossMark,#dot1,#dot2,#dot3{opacity:0}
+
+  /* ============ STATE 01｜正在工作（2.5s 循环） ============ */
+  @keyframes s1write{
+    0%{transform:translate(0,0)} 6%{transform:translate(-6px,2px)} 13%{transform:translate(4px,-2px)}
+    20%{transform:translate(-5px,3px)} 27%{transform:translate(2px,-1px)} 32%,100%{transform:translate(0,0)}
+  }
+  @keyframes s1flip{
+    0%,32%{transform:translate(0,0) rotate(0)} 44%{transform:translate(14px,-26px) rotate(-12deg)}
+    58%{transform:translate(3px,-5px) rotate(-3deg)} 64%,100%{transform:translate(0,0) rotate(0)}
+  }
+  @keyframes s1paper{
+    0%,32%{transform:translate(0,0) rotate(0)} 44%{transform:translate(0,-8px) rotate(-5deg)}
+    58%,100%{transform:translate(0,0) rotate(0)}
+  }
+  @keyframes s1rub{
+    0%,63%{opacity:0;transform:translate(0,0)} 68%{opacity:1;transform:translate(-2px,0)}
+    73%{transform:translate(-13px,1px)} 78%{transform:translate(5px,-1px)}
+    83%{transform:translate(-8px,0)} 88%,100%{opacity:0;transform:translate(0,0)}
+  }
+  #scene[data-state="1"] #armR    {animation:s1write 2.5s ease-in-out infinite}
+  #scene[data-state="1"] #pencil  {animation:s1write 2.5s ease-in-out infinite}
+  #scene[data-state="1"] #armL    {animation:s1flip  2.5s ease-in-out infinite}
+  #scene[data-state="1"] #paperWrap{animation:s1paper 2.5s ease-in-out infinite}
+  #scene[data-state="1"] #eraser  {animation:s1rub   2.5s ease-in-out infinite}
+
+  /* ============ STATE 02｜正在思考（2.5s 静音） ============ */
+  @keyframes s2head{
+    0%{transform:translate(0,0) rotate(0)} 20%{transform:translate(-2px,-3px) rotate(-2deg)}
+    44%,100%{transform:translate(4px,-7px) rotate(-9deg)}
+  }
+  @keyframes s2armL{0%{transform:translate(0,0)} 44%,100%{transform:translate(12px,-24px)}}
+  @keyframes s2pencil{0%{transform:translate(0,0)} 20%,100%{transform:translate(-14px,-30px) rotate(16deg)}}
+  @keyframes s2blink{0%,62%{transform:scaleY(1)} 66%{transform:scaleY(.08)} 70%,100%{transform:scaleY(1)}}
+  @keyframes s2breathe{0%,100%{transform:scale(1)} 50%{transform:scale(1.009)}}
+  @keyframes s2dot{0%{opacity:0;transform:translateY(7px)} 22%,100%{opacity:1;transform:translateY(0)}}
+  #scene[data-state="2"] #head   {animation:s2head 2.5s ease-out 1 forwards}
+  #scene[data-state="2"] #armL   {animation:s2armL 2.5s ease-out 1 forwards}
+  #scene[data-state="2"] #pencil {animation:s2pencil 2.5s ease-out 1 forwards}
+  #scene[data-state="2"] #eyes   {animation:s2blink 2.5s linear infinite}
+  #scene[data-state="2"] #dot1   {animation:s2dot 2.5s ease-out 0s 1 both}
+  #scene[data-state="2"] #dot2   {animation:s2dot 2.5s ease-out .3s 1 both}
+  #scene[data-state="2"] #dot3   {animation:s2dot 2.5s ease-out .6s 1 both}
+  #scene[data-state="2"] #ada    {animation:s2breathe 4s ease-in-out infinite}
+
+  /* ============ STATE 03｜踩坑出错（2.5s 单次） ============ */
+  @keyframes s3ada{
+    0%,16%{transform:translate(0,0) rotate(0)} 40%{transform:translate(7px,4px) rotate(-7deg)}
+    60%,100%{transform:translate(11px,28px) rotate(8deg)}
+  }
+  @keyframes s3armR{
+    0%,16%{transform:rotate(0)} 30%{transform:rotate(-44deg)} 48%{transform:rotate(30deg)}
+    64%{transform:rotate(-18deg)} 82%,100%{transform:rotate(-4deg)}
+  }
+  @keyframes s3armL{
+    0%,16%{transform:rotate(0)} 30%{transform:rotate(38deg)} 48%{transform:rotate(-30deg)}
+    64%{transform:rotate(14deg)} 82%,100%{transform:rotate(4deg)}
+  }
+  @keyframes s3pencil{
+    0%,40%{transform:translate(0,0) rotate(0);opacity:1}
+    72%{transform:translate(74px,-86px) rotate(210deg);opacity:1} 88%,100%{opacity:0}
+  }
+  @keyframes s3cross{0%,56%{opacity:0} 68%,100%{opacity:1}}
+  @keyframes s3glasses{0%,60%{transform:rotate(0)} 78%,100%{transform:rotate(-9deg)}}
+  #scene[data-state="3"] #ada      {animation:s3ada 2.5s ease-in-out 1 forwards}
+  #scene[data-state="3"] #armR     {animation:s3armR 2.5s ease-in-out 1 forwards}
+  #scene[data-state="3"] #armL     {animation:s3armL 2.5s ease-in-out 1 forwards}
+  #scene[data-state="3"] #pencil   {animation:s3pencil 2.5s ease-out 1 forwards}
+  #scene[data-state="3"] #crossMark{animation:s3cross 2.5s linear 1 forwards}
+  #scene[data-state="3"] #glasses  {animation:s3glasses 2.5s ease-in-out 1 forwards}
+
+  /* ============ STATE 04｜被停住（2.0s 定格） ============ */
+  @keyframes s4pencil{
+    0%{transform:translate(0,0) rotate(0);opacity:1} 15%{transform:translate(30px,40px) rotate(115deg);opacity:1}
+    30%,100%{transform:translate(32px,42px) rotate(115deg);opacity:0}
+  }
+  @keyframes s4edge{
+    0%,15%{transform:translate(0,-9px) rotate(-5deg)} 45%,100%{transform:translate(0,0) rotate(0)}
+  }
+  @keyframes s4armR{0%{transform:rotate(0)} 22%,100%{transform:rotate(-7deg)}}
+  #scene[data-state="4"] #pencil   {animation:s4pencil 2s ease-in 1 forwards}
+  #scene[data-state="4"] #paperWrap{animation:s4edge 2s ease-out 1 forwards}
+  #scene[data-state="4"] #armR     {animation:s4armR 2s ease-out 1 forwards}
+
+  /* ============ STATE 05｜等你授权（3.0s 单次） ============ */
+  @keyframes s5head{
+    0%{transform:translate(0,0) rotate(0)} 17%{transform:translate(0,1px) rotate(1deg)}
+    40%{transform:translate(0,-10px) rotate(0)} 60%{transform:translate(0,-10px) rotate(5deg)}
+    72%{transform:translate(0,-10px) rotate(-5deg)} 84%,100%{transform:translate(0,-10px) rotate(0)}
+  }
+  @keyframes s5pencil{0%{transform:translate(0,0) rotate(0)} 17%,100%{transform:translate(-26px,32px) rotate(-68deg)}}
+  @keyframes s5armR{0%{transform:translate(0,0)} 30%{transform:translate(6px,-14px)} 48%,100%{transform:translate(30px,-58px) rotate(16deg)}}
+  @keyframes s5body{0%,100%{transform:translateY(0)} 40%,80%{transform:translateY(-3px)}}
+  #scene[data-state="5"] #head   {animation:s5head 3s ease-in-out 1 forwards}
+  #scene[data-state="5"] #pencil {animation:s5pencil 3s ease-in-out 1 forwards}
+  #scene[data-state="5"] #armR   {animation:s5armR 3s ease-in-out 1 forwards}
+  #scene[data-state="5"] #ada    {animation:s5body 4.5s ease-in-out infinite}
+
+  /* ============ STATE 06｜阶段小成功（2.0s 单次） ============ */
+  @keyframes s6stack{
+    0%{opacity:0;transform:translate(-92px,0)} 10%{opacity:1;transform:translate(-92px,0)}
+    40%,100%{opacity:1;transform:translate(0,0)}
+  }
+  @keyframes s6nod{
+    0%,40%{transform:translate(0,0) rotate(0)} 52%{transform:translate(0,5px) rotate(4deg)}
+    66%,100%{transform:translate(0,0) rotate(0)}
+  }
+  @keyframes s6armR{0%,42%{transform:translate(0,0)} 26%{transform:translate(-14px,-8px)} 58%,100%{transform:translate(0,0)}}
+  #scene[data-state="6"] #stackSmall{animation:s6stack 2s ease-out 1 forwards}
+  #scene[data-state="6"] #head      {animation:s6nod 2s ease-in-out 1 forwards}
+  #scene[data-state="6"] #armR      {animation:s6armR 2s ease-in-out 1 forwards}
+
+  /* ============ STATE 07｜全部完成（3.0s 单次） ============ */
+  @keyframes s7stack{
+    0%{opacity:0;transform:scale(.72)}
+    10%{opacity:1;transform:translate(0,-5px) scale(.72)}
+    16%{transform:translate(0,2px) scale(.8)} 22%{transform:translate(0,-4px) scale(.86)}
+    28%{transform:translate(0,1px) scale(.92)} 33%{transform:translate(0,0) scale(1)}
+    67%,100%{opacity:1;transform:translate(-14px,16px) scale(1.42)}
+  }
+  @keyframes s7ada{
+    0%,67%{transform:translate(0,0) rotate(0)} 100%{transform:translate(-3px,12px) rotate(-3deg)}
+  }
+  @keyframes s7armR{0%,33%{transform:translate(0,0)} 18%{transform:translate(-16px,-6px)} 55%{transform:translate(-46px,10px)} 72%,100%{transform:translate(-8px,2px)}}
+  @keyframes s7armL{0%,33%{transform:translate(0,0)} 18%{transform:translate(6px,-6px)} 55%{transform:translate(34px,10px)} 72%,100%{transform:translate(6px,2px)}}
+  #scene[data-state="7"] #stackBig{animation:s7stack 3s ease-out 1 forwards}
+  #scene[data-state="7"] #ada     {animation:s7ada 3s ease-in-out 1 forwards}
+  #scene[data-state="7"] #armR    {animation:s7armR 3s ease-in-out 1 forwards}
+  #scene[data-state="7"] #armL    {animation:s7armL 3s ease-in-out 1 forwards}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s !important;animation-iteration-count:1 !important}
+  }
+
+  /* ============ 浮窗模式：?embed=1 ============
+     只留阿达本人，标题/说明/按钮/音量条全撤，画面铺满窗口。
+     浮窗那个小程序就是这么加载它的 —— 同一份文件，两种看法。 */
+  html.embed body{background:transparent;padding:0;gap:0;overflow:hidden}
+  html.embed header,
+  html.embed .caption,
+  html.embed .pad,
+  html.embed .row,
+  html.embed footer{display:none}
+  html.embed .stage{
+    width:100vw;height:100vh;aspect-ratio:auto;border-radius:14px;box-shadow:none;
+  }
+</style>
+<script>
+  /* 浮窗模式：带 ?embed=1 就只留画面。
+     要在 <head> 里尽早设，放晚了控件会闪一下。 */
+  if (new URLSearchParams(location.search).has('embed')) {
+    document.documentElement.classList.add('embed');
+  }
+</script>
+</head>
+<body>
+
+<header>
+  <h1>GLANCE-HINT</h1>
+  <p>阿达 · 七组状态 · 每组 2–3 秒</p>
+</header>
+
+<div class="stage">
+<svg id="scene" viewBox="0 0 480 480" data-state="0" role="img" aria-label="作曲家阿达的状态动画">
+  <rect width="480" height="480" fill="#F7F3EA"/>
+
+  <!-- ================= 阿达 ================= -->
+  <g id="ada">
+    <!-- 身体 / 衬衫（下摆伸到画框外，被桌子挡住） -->
+    <path d="M188 256 Q240 238 292 256 L318 430 Q240 446 162 430 Z"
+          fill="#FFFFFF" stroke="#1C1C1E" stroke-width="3" stroke-linejoin="round"/>
+    <!-- 领结 -->
+    <path d="M240 266 l-25 -12 v24 z" fill="#1C1C1E"/>
+    <path d="M240 266 l25 -12 v24 z" fill="#1C1C1E"/>
+    <rect x="232" y="257" width="16" height="18" rx="4" fill="#1C1C1E"/>
+    <!-- 脖子 -->
+    <path d="M226 222 h28 v40 h-28 z" fill="#E8BFA6"/>
+
+    <!-- 头 -->
+    <g id="head">
+      <!-- 头发：一整块蓬松短发 -->
+      <ellipse cx="240" cy="152" rx="66" ry="70" fill="#1C1C1E"/>
+      <ellipse cx="184" cy="206" rx="12" ry="26" fill="#1C1C1E"/>
+      <ellipse cx="296" cy="206" rx="12" ry="26" fill="#1C1C1E"/>
+      <!-- 脸 -->
+      <ellipse cx="240" cy="184" rx="53" ry="57" fill="#F6D9C4" stroke="#1C1C1E" stroke-width="3"/>
+      <!-- 刘海：盖住额头的一整块，下缘是弧线 -->
+      <ellipse cx="240" cy="132" rx="56" ry="30" fill="#1C1C1E"/>
+      <!-- 发缝：偏左一道浅色的分开处 -->
+      <path d="M231 108 C225 122 223 136 225 150" stroke="#3F3F44" stroke-width="3"
+            fill="none" stroke-linecap="round"/>
+      <!-- 眉眼 -->
+      <g id="eyes">
+        <ellipse cx="216" cy="187" rx="8.5" ry="10.5" fill="#3A2A20"/>
+        <ellipse cx="264" cy="187" rx="8.5" ry="10.5" fill="#3A2A20"/>
+      </g>
+      <path d="M205 167 q11 -7 21 -2" stroke="#1C1C1E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <path d="M254 165 q11 -5 21 3" stroke="#1C1C1E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <!-- 嘴：温和含笑 -->
+      <path d="M229 216 q11 9 22 0" stroke="#1C1C1E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <!-- 眼镜 -->
+      <g id="glasses" fill="none" stroke="#6B6B6B" stroke-width="2.6">
+        <rect x="191" y="169" width="46" height="37" rx="9"/>
+        <rect x="243" y="169" width="46" height="37" rx="9"/>
+        <path d="M237 187 h6"/>
+        <path d="M191 183 h-10"/><path d="M289 183 h10"/>
+      </g>
+    </g>
+
+    <!-- 左臂（白袖 + 黑描边，浅底上也看得见） -->
+    <g id="armL">
+      <path d="M202 276 C190 304 182 322 176 338" stroke="#1C1C1E" stroke-width="29"
+            fill="none" stroke-linecap="round"/>
+      <path d="M202 276 C190 304 182 322 176 338" stroke="#FFFFFF" stroke-width="23"
+            fill="none" stroke-linecap="round"/>
+      <circle cx="176" cy="338" r="13" fill="#F6D9C4" stroke="#1C1C1E" stroke-width="2.6"/>
+    </g>
+
+    <!-- 右臂 -->
+    <g id="armR">
+      <path d="M278 276 C290 304 298 322 304 338" stroke="#1C1C1E" stroke-width="29"
+            fill="none" stroke-linecap="round"/>
+      <path d="M278 276 C290 304 298 322 304 338" stroke="#FFFFFF" stroke-width="23"
+            fill="none" stroke-linecap="round"/>
+      <circle cx="304" cy="338" r="13" fill="#F6D9C4" stroke="#1C1C1E" stroke-width="2.6"/>
+    </g>
+  </g>
+
+  <!-- 思考时的省略号（STATE_02） -->
+  <g fill="#9A9184">
+    <circle id="dot1" cx="314" cy="110" r="6"/>
+    <circle id="dot2" cx="334" cy="110" r="6"/>
+    <circle id="dot3" cx="354" cy="110" r="6"/>
+  </g>
+
+  <!-- ================= 桌上的纸 ================= -->
+  <g id="paperWrap">
+    <g transform="rotate(-3 240 330)">
+      <rect x="172" y="302" width="136" height="58" rx="3" fill="#F7F1E3" stroke="#DCD2BC" stroke-width="2"/>
+      <g stroke="#CFC5AC" stroke-width="1">
+        <line x1="182" y1="314" x2="298" y2="314"/>
+        <line x1="182" y1="323" x2="298" y2="323"/>
+        <line x1="182" y1="332" x2="298" y2="332"/>
+        <line x1="182" y1="341" x2="298" y2="341"/>
+        <line x1="182" y1="350" x2="298" y2="350"/>
+      </g>
+      <g fill="#5B5346">
+        <ellipse cx="200" cy="325" rx="4" ry="3"/><rect x="199" y="302" width="2" height="24"/>
+        <ellipse cx="230" cy="334" rx="4" ry="3"/><rect x="229" y="311" width="2" height="24"/>
+        <ellipse cx="264" cy="320" rx="4" ry="3"/><rect x="263" y="297" width="2" height="24"/>
+        <ellipse cx="288" cy="329" rx="4" ry="3"/><rect x="287" y="306" width="2" height="24"/>
+      </g>
+    </g>
+    <!-- 草稿纸 -->
+    <g transform="rotate(7 132 330)">
+      <rect x="98" y="308" width="68" height="46" rx="3" fill="#F0E6CE" stroke="#DCD2BC" stroke-width="2"/>
+      <path d="M106 320 h52 M106 330 h46 M106 340 h50" stroke="#D8CCB0" stroke-width="2"/>
+    </g>
+  </g>
+
+  <!-- 打叉标记（STATE_03） -->
+  <g id="crossMark" stroke="#C1624F" stroke-width="5" stroke-linecap="round">
+    <path d="M188 318 l38 36 M226 318 l-38 36"/>
+    <path d="M252 316 l36 34 M288 316 l-36 34"/>
+  </g>
+
+  <!-- 铅笔 -->
+  <g id="pencil">
+    <g transform="translate(272 342) rotate(26)">
+      <rect x="-5.5" y="-72" width="11" height="64" rx="2" fill="#D9A05B" stroke="#1C1C1E" stroke-width="2"/>
+      <path d="M-5.5 -8 l5.5 -14 l5.5 14 z" fill="#F0E6CE" stroke="#1C1C1E" stroke-width="2"/>
+      <path d="M-2 -22 l2 -5 l2 5 z" fill="#4A4A4A"/>
+      <rect x="-5.5" y="-72" width="11" height="9" rx="1.5" fill="#E8BFA6" stroke="#1C1C1E" stroke-width="2"/>
+    </g>
+  </g>
+
+  <!-- 橡皮 -->
+  <g id="eraser">
+    <rect x="326" y="318" width="28" height="17" rx="4" fill="#F3E9E4" stroke="#1C1C1E" stroke-width="2.4"/>
+    <rect x="326" y="318" width="28" height="6" rx="3" fill="#D9C2BA"/>
+  </g>
+
+  <!-- 整理好的小纸堆（STATE_06） -->
+  <g id="stackSmall">
+    <rect x="334" y="320" width="76" height="9" rx="2" fill="#FBF6E8" stroke="#DCD2BC" stroke-width="1.6"/>
+    <rect x="337" y="312" width="76" height="9" rx="2" fill="#F7F1E3" stroke="#DCD2BC" stroke-width="1.6"/>
+    <rect x="340" y="304" width="76" height="9" rx="2" fill="#FDFAF0" stroke="#DCD2BC" stroke-width="1.6"/>
+  </g>
+
+  <!-- 一整套整理完毕的谱纸（STATE_07） -->
+  <g id="stackBig">
+    <rect x="320" y="334" width="104" height="12" rx="2" fill="#F3ECD9" stroke="#DCD2BC" stroke-width="1.6"/>
+    <rect x="323" y="324" width="104" height="12" rx="2" fill="#FBF6E8" stroke="#DCD2BC" stroke-width="1.6"/>
+    <rect x="326" y="314" width="104" height="12" rx="2" fill="#F7F1E3" stroke="#DCD2BC" stroke-width="1.6"/>
+    <rect x="329" y="304" width="104" height="12" rx="2" fill="#FDFAF0" stroke="#DCD2BC" stroke-width="1.6"/>
+    <rect x="332" y="294" width="104" height="12" rx="2" fill="#F7F1E3" stroke="#DCD2BC" stroke-width="1.6"/>
+  </g>
+
+  <!-- ================= 前景：桌子 ================= -->
+  <rect x="0" y="360" width="480" height="18" fill="#D8BC94"/>
+  <rect x="0" y="376" width="480" height="104" fill="#AE8C60"/>
+  <rect x="0" y="376" width="480" height="6" fill="#C8A97E"/>
+</svg>
+</div>
+
+<p class="caption" id="caption">
+  <b>阿达在写谱。</b>
+  <span class="why">点下面的按钮，看他怎么把 DSH 的工况演出来。</span>
+</p>
+
+<div class="pad" id="pad">
+  <button data-s="1">在写</button>
+  <button data-s="2">在想</button>
+  <button data-s="3">摔了</button>
+  <button data-s="4">停了</button>
+  <button data-s="5">等你</button>
+  <button data-s="6">成一半</button>
+  <button data-s="7">全成了</button>
+</div>
+
+<div class="row">
+  <button id="auto">自动演一遍</button>
+  <label>音量 <input id="vol" type="range" min="0" max="100" value="55"></label>
+</div>
+
+<footer>
+  <em>这是概念示意，不是成品。</em>阿达的形状是几何搭的，不是画出来的；声音是浏览器现场合成的，不是录制的成品音效。
+  真正出图出音，照 <em>01–04</em> 那四份文档走。
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var scene   = document.getElementById('scene');
+  var caption = document.getElementById('caption');
+  var pad     = document.getElementById('pad');
+
+  /* ---------- 每个状态说一句人话 ---------- */
+  var COPY = {
+    0:['阿达在写谱。','点下面的按钮，看他怎么把 DSH 的工况演出来。'],
+    1:['正在工作 · 在写','DSH 在后台读文档、摘抄、整理素材。声音是循环的：翻纸、书写、擦橡皮。'],
+    2:['正在思考 · 在想','推理运算的时候他在托腮发呆。这一段<b>全程静音</b>——停顿就是它的表达。'],
+    3:['踩坑出错 · 摔了','文件解析失败、调用异常。他是滑稽地摔，不能有痛感，声音也不能吓人。'],
+    4:['被停住 · 停了','你按了停止。铅笔脱手，所有动作定格，纸就停在那页——不加呼吸，就是要那股"时间停了"的劲儿。'],
+    5:['等你授权 · 等你','要写盘、要删除、要覆盖了，他放下笔抬头看你。声音是提醒，不是催。'],
+    6:['阶段小成功 · 成一半','一部分整理完了，摞到旁边，点一下头。幅度要小——这是子任务，不能演成大结局。'],
+    7:['全部完成 · 全成了','他把整叠谱纸墩齐、推到你面前，然后靠回椅子松一口气。']
+  };
+  var DUR = {1:2500, 2:2500, 3:2500, 4:2000, 5:3000, 6:2000, 7:3000};
+
+  /* ================= 声音：浏览器现场合成 ================= */
+  var ctx = null, master = null, vol = 0.55;
+  var timers = [], loops = [];
+
+  function audio(){
+    if (ctx) return ctx;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = vol;
+    master.connect(ctx.destination);
+    return ctx;
+  }
+  function noiseBuf(dur){
+    var c = audio(), len = Math.max(1, Math.floor(c.sampleRate * dur));
+    var buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return buf;
+  }
+  /* 一段带包络的噪声：纸张类的声音都靠它 */
+  function sfxNoise(o){
+    if (!audio() || vol <= 0) return;
+    var c = ctx, t = c.currentTime + (o.delay || 0);
+    var src = c.createBufferSource(); src.buffer = noiseBuf(o.dur + 0.02);
+    var f = c.createBiquadFilter();
+    f.type = o.type || 'bandpass'; f.frequency.value = o.freq;
+    if (o.q) f.Q.value = o.q;
+    var g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(o.vol, t + (o.atk || 0.02));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t); src.stop(t + o.dur + 0.03);
+  }
+  /* 一个柔和的音：三个提示音全走它，保证是同一族音色 */
+  function sfxTone(freq, dur, delay, gain){
+    if (!audio() || vol <= 0) return;
+    var c = ctx, t = c.currentTime + (delay || 0);
+    var osc = c.createOscillator(); osc.type = 'triangle'; osc.frequency.value = freq;
+    var g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(gain, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+
+  var S = {
+    flip:  function(v){ sfxNoise({dur:0.32, freq:2600, q:0.7, vol:v||0.30, atk:0.025}); },
+    write: function(v){ sfxNoise({dur:0.07, type:'highpass', freq:3200, vol:v||0.10, atk:0.005}); },
+    rub:   function(v){ sfxNoise({dur:0.20, freq:1100, q:1.1, vol:v||0.16, atk:0.03}); },
+    fall:  function(){
+      sfxNoise({dur:0.22, type:'lowpass', freq:900, vol:0.16, atk:0.04});      // 椅子蹭地
+      if (!audio() || vol <= 0) return;
+      var c = ctx, t = c.currentTime + 0.55;                                    // 落地
+      var o = c.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(150, t);
+      o.frequency.exponentialRampToValueAtTime(55, t + 0.22);
+      var g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.30, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.30);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.34);
+      sfxNoise({dur:0.18, freq:1800, q:0.6, vol:0.14, delay:0.72});             // 纸散落
+      sfxNoise({dur:0.06, type:'highpass', freq:2400, vol:0.10, delay:0.95});   // 铅笔滚
+      sfxNoise({dur:0.06, type:'highpass', freq:2000, vol:0.08, delay:1.06});
+    },
+    ask:   function(){ sfxTone(523.25, 0.34, 0, 0.19); sfxTone(783.99, 0.52, 0.26, 0.21); },
+    mini:  function(){ sfxTone(659.25, 0.24, 0, 0.15); sfxTone(783.99, 0.38, 0.19, 0.17); },
+    big:   function(){
+      sfxTone(523.25, 0.30, 0, 0.18); sfxTone(659.25, 0.30, 0.20, 0.18);
+      sfxTone(783.99, 0.78, 0.40, 0.20);
+      sfxNoise({dur:0.30, freq:2200, q:0.7, vol:0.10, delay:0.05});             // 底下垫一层纸张整理
+    }
+  };
+
+  /* 循环音：三层各自随机触发。不做成一条死循环 —— 不然两秒一翻纸，像复读机 */
+  function startWorkLoops(){
+    loops.push(setInterval(function(){ S.write(0.05 + Math.random() * 0.05); }, 140));
+    (function flipAgain(){
+      var id = setTimeout(function(){ S.flip(0.10 + Math.random() * 0.09); flipAgain(); },
+                          1500 + Math.random() * 1800);
+      loops.push(id);
+    })();
+    (function rubAgain(){
+      var id = setTimeout(function(){ S.rub(0.09 + Math.random() * 0.06); rubAgain(); },
+                          2100 + Math.random() * 2600);
+      loops.push(id);
+    })();
+  }
+  function stopSound(){
+    loops.forEach(function(id){ clearTimeout(id); clearInterval(id); });
+    timers.forEach(function(id){ clearTimeout(id); });
+    loops = []; timers = [];
+  }
+
+  /* ================= 切状态 ================= */
+  var current = 0, autoRunning = false;
+
+  function setState(n){
+    stopSound();
+    /* 先归零再设值，动画才会重播 */
+    scene.dataset.state = '0';
+    void scene.offsetWidth;
+    scene.dataset.state = String(n);
+    current = n;
+    render(n);
+
+    if (n === 1) startWorkLoops();
+    else if (n === 3) timers.push(setTimeout(S.fall, 400));
+    else if (n === 5) timers.push(setTimeout(S.ask, 1200));
+    else if (n === 6) timers.push(setTimeout(S.mini, 800));
+    else if (n === 7) timers.push(setTimeout(S.big, 1000));
+  }
+
+  /* 给浮窗用的唯一入口 —— 外面的程序只认这两个方法，不碰内部变量。 */
+  window.ghs = {
+    set: function(n){ try{ audio(); }catch(e){} setState(n); },
+    now: function(){ return current; },
+    /* 画面缩放到窗口：浮窗很小，caption 之类都不用管，SVG 自己按比例缩 */
+    ready: true
+  };
+
+  function render(n){
+    var c = COPY[n] || COPY[0];
+    caption.innerHTML = '<b>' + c[0] + '</b><span class="why">' + c[1] + '</span>';
+    Array.prototype.forEach.call(pad.querySelectorAll('button'), function(b){
+      b.setAttribute('aria-pressed', String(+b.dataset.s === n));
+    });
+  }
+
+  pad.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-s]');
+    if (!b) return;
+    autoRunning = false;
+    audio();
+    setState(+b.dataset.s);
+  });
+
+  /* 自动演一遍 */
+  document.getElementById('auto').addEventListener('click', function(){
+    audio();
+    autoRunning = true;
+    stopSound();
+    var order = [1,2,3,4,5,6,7], i = 0;
+    (function next(){
+      if (!autoRunning || i >= order.length) { autoRunning = false; return; }
+      var n = order[i++];
+      setState(n);
+      timers.push(setTimeout(next, DUR[n] + 450));
+    })();
+  });
+
+  document.getElementById('vol').addEventListener('input', function(e){
+    vol = e.target.value / 100;
+    if (master) master.gain.value = vol;
+  });
+
+  /* 直接开在"在写"这一格。
+     ?state=3 可以直接跳到某个状态；
+     再带上 &t=2.0 会把动画定格在第 2 秒那一帧 —— 截图和做宣传图都用得上。 */
+  var q = new URLSearchParams(location.search);
+  var qs = parseInt(q.get('state') || '', 10);
+  var freeze = parseFloat(q.get('t'));
+  var hash = parseInt((location.hash || '').replace('#',''), 10);
+  var start = (qs >= 1 && qs <= 7) ? qs : ((hash >= 1 && hash <= 7) ? hash : 1);
+
+  setState(start);
+
+  if (!isNaN(freeze)){
+    stopSound();
+    Array.prototype.forEach.call(document.querySelectorAll('#scene *'), function(el){
+      el.style.animationPlayState = 'paused';
+      el.style.animationDelay = '-' + freeze + 's';
+    });
+  }
+})();
+</script>
+</body>
+</html>
