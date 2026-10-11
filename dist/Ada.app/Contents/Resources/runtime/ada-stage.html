@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>阿达 · 七格舞台</title>
+<style>
+  :root{
+    --paper:#F7F3EA; --ink:#2B2B2E; --line:#E3DCCB;
+    --ok:#7BAE7F; --warn:#E0A458; --bad:#C1624F; --stop:#8A8A8E;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; padding:22px;
+  }
+
+  /* ---------- 舞台 ---------- */
+  .stage{
+    position:relative; width:min(46vh,420px); aspect-ratio:1/1;
+    background:#FBF8EF; border:1px solid var(--line); border-radius:22px;
+    overflow:hidden; display:grid; place-items:center;
+    box-shadow:0 10px 28px rgba(0,0,0,.06);
+  }
+  .stage img{
+    width:88%; height:88%; object-fit:contain;
+    transform-origin:50% 88%;              /* 以"桌面/胸口"为支点转，像坐在那儿 */
+    transition:filter .25s ease, transform .35s ease;
+  }
+  .dots{
+    position:absolute; right:8%; top:11%;
+    display:flex; gap:.22em; font-size:clamp(18px,4.6vh,32px);
+    opacity:0; transition:opacity .2s;
+  }
+  .dots i{
+    width:.30em; height:.30em; border-radius:50%; background:#9A9A93;
+    opacity:.15; animation:dotPulse 2.1s ease-in-out infinite;
+  }
+  /* 六个点从左到右一个个亮起来、轻轻上浮，循环 —— 他 2026-10-11 点名要的"循环出现的点"。
+     分两处错开延迟，一排点才像"在动"，而不是整排同时闪。 */
+  .dots i:nth-child(1){ animation-delay:0s }
+  .dots i:nth-child(2){ animation-delay:.18s }
+  .dots i:nth-child(3){ animation-delay:.36s }
+  .dots i:nth-child(4){ animation-delay:.54s }
+  .dots i:nth-child(5){ animation-delay:.72s }
+  .dots i:nth-child(6){ animation-delay:.90s }
+  @keyframes dotPulse{
+    0%, 100%{ opacity:.15; transform:translateY(0) }
+    35%     { opacity:1;   transform:translateY(-.14em) }
+  }
+
+  /* ---------- 七格的"演法" ---------- */
+  .stage[data-state="1"] img{ animation:work .52s ease-in-out infinite alternate }
+  .stage[data-state="2"] img{ animation:breatheSlow 3.4s ease-in-out infinite alternate }
+  .stage[data-state="2"] .dots{ opacity:1 }
+  .stage[data-state="3"] img{ animation:fall .95s cubic-bezier(.3,1.5,.5,1) 1 both }
+  .stage[data-state="4"] img{ animation:none; filter:saturate(.55) brightness(.985) }
+  .stage[data-state="5"] img{ animation:ask 2.6s ease-in-out infinite alternate }
+  .stage[data-state="6"] img{ animation:nod .85s ease-in-out 1 both }
+  .stage[data-state="7"] img{ animation:relax 1.5s cubic-bezier(.2,.9,.3,1) 1 both }
+
+  @keyframes work{
+    from{ transform:translateY(0) rotate(0deg) }
+    to  { transform:translateY(-1.8%) rotate(-.6deg) }
+  }
+  @keyframes breatheSlow{
+    from{ transform:scale(1) }
+    to  { transform:scale(1.014) }
+  }
+  @keyframes fall{
+    0%  { transform:translateY(0) rotate(0deg) }
+    18% { transform:translateY(0) rotate(0deg) }      /* 先僵一下 */
+    42% { transform:translateY(-2%) rotate(-7deg) }
+    62% { transform:translateY(6%) rotate(6deg) }
+    80% { transform:translateY(9%) rotate(-4deg) }
+    100%{ transform:translateY(8%) rotate(-3deg) }
+  }
+  @keyframes ask{
+    from{ transform:scale(1.03) }
+    to  { transform:scale(1.045) }
+  }
+  @keyframes nod{
+    0%  { transform:translateY(0) }
+    35% { transform:translateY(2.2%) }
+    70% { transform:translateY(-.6%) }
+    100%{ transform:translateY(0) }
+  }
+  @keyframes relax{
+    0%  { transform:rotate(0deg) scale(1) }
+    100%{ transform:rotate(-2.2deg) scale(1.02) }
+  }
+
+  /* ---------- 下面那行字 ---------- */
+  .line{ text-align:center; line-height:1.5; max-width:min(90vw,560px) }
+  .line b{ font-size:clamp(17px,2.6vh,22px) }
+  .line .act{ display:block; margin-top:4px; font-size:clamp(12px,1.9vh,14px); color:#6F6F68 }
+  .line .cue{ display:block; margin-top:6px; font-size:clamp(12px,1.9vh,14px); color:#8A8A8E }
+  .line .cue b{ font-size:inherit; background:#EFE7D4; border-radius:6px; padding:1px 6px; font-weight:600 }
+
+  /* ---------- 按钮 ---------- */
+  .pad{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:min(92vw,620px) }
+  .pad button{
+    font:inherit; font-size:clamp(13px,2vh,15px); padding:7px 14px;
+    border:1px solid var(--line); background:#fff; color:var(--ink);
+    border-radius:999px; cursor:pointer;
+  }
+  .pad button[aria-pressed="true"]{ background:var(--ink); color:#fff; border-color:var(--ink) }
+  .note{ max-width:min(92vw,620px); text-align:center; font-size:clamp(11px,1.7vh,13px); color:#8A8A8E; line-height:1.6 }
+
+  /* ---------- 启动问候：气泡 + 挥手（每启动一次演一回） ---------- */
+  .bubble{
+    position:absolute; left:50%; top:7%; z-index:2;
+    transform:translateX(-50%) translateY(5px) scale(.94);
+    background:#fff; color:var(--ink); border:1px solid var(--line);
+    border-radius:14px; padding:7px 14px;
+    font-size:clamp(12px,3.2vh,17px); white-space:nowrap;
+    box-shadow:0 6px 18px rgba(0,0,0,.08);
+    opacity:0; pointer-events:none;
+    transition:opacity .25s ease, transform .32s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .bubble::after{
+    content:""; position:absolute; left:50%; bottom:-7px; margin-left:-7px;
+    border:7px solid transparent; border-top-color:#fff; border-bottom:0;
+  }
+  body.welcome .bubble{ opacity:1; transform:translateX(-50%) translateY(0) scale(1) }
+  /* 只到胸口的一张定妆图做不出真"挥手"，所以是**整个人小小地左右摆三下** ——
+     配上气泡和那句问候音，一眼就明白是在打招呼。 */
+  body.welcome .stage img{ animation:wave 1.05s ease-in-out 3 both }
+  @keyframes wave{
+    0%,100%{ transform:rotate(0deg) }
+    22%    { transform:rotate(-4.5deg) translateY(-1.2%) }
+    66%    { transform:rotate(4.5deg)  translateY(-1.2%) }
+  }
+
+  /* ---------- 小窗模式（浮窗 300×300 那种） ---------- */
+  body.compact{ gap:6px; padding:0; justify-content:center }
+  body.compact .stage{ width:100vw; height:100vh; border:0; border-radius:0; box-shadow:none; background:transparent }
+  body.compact .line,body.compact .pad,body.compact .note{ display:none }
+</style>
+</head>
+<body>
+
+  <div class="stage" id="stage" data-state="2">
+    <img id="ada" alt="阿达">
+    <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="bubble" id="bubble">嗨，今天想干麻？</div>
+  </div>
+
+  <div class="line">
+    <b id="name">在想</b>
+    <span class="act" id="act">停笔托腮，看向斜上方</span>
+    <span class="cue" id="cue"></span>
+  </div>
+
+  <div class="pad" id="pad"></div>
+
+  <div class="note">
+    这一页是<b>骨架</b>：现在七格都用同一张定妆图（它只到胸口）。<br>
+    等 <code>assets/states/01.png</code> … <code>07.png</code> 出来，这一页会自动换上去，一行代码都不用改。<br>
+    小窗模式：地址后面加 <code>?compact</code>（浮窗就长这样，只有画面、没有文字）。
+  </div>
+
+<!-- 用户自己的音效清单（安装脚本生成的）。没有这个文件也不报错，页面就用现场合成的。 -->
+<script src="../sounds/list.js"></script>
+<script>
+/* 七格的全部信息 —— 改这里就够了。
+   file  = 该格用哪张图（放在 assets/states/，没有就退回定妆图）
+   name  = 状态名（跟看门狗、浮窗里的编号一一对应）
+   act   = 一眼睛看得懂的一句话
+   cue   = 我在回复里会说的那个加粗词（有就显示） */
+var STATES = {
+  1:{ name:"在写",   act:"伏案写谱、翻页、擦橡皮", cue:"" },
+  2:{ name:"在想",   act:"停笔托腮，看向斜上方（全程静音）", cue:"" },
+  3:{ name:"摔了",   act:"先僵一下，然后漫画式坐倒在地", cue:"踩坑" },
+  4:{ name:"停了",   act:"铅笔松手，一切定住", cue:"" },
+  5:{ name:"等你",   act:"笔横放，抬头看你，抬手「请」", cue:"允许" },
+  6:{ name:"成一半", act:"拢齐一小沓谱稿，推一边，小点头", cue:"搞好了" },
+  7:{ name:"全成了", act:"全部墩齐推给你，靠回椅背松口气", cue:"做完了" }
+};
+var FALLBACK = "../ref/face.png";
+
+var stage = document.getElementById("stage"),
+    img   = document.getElementById("ada"),
+    nameEl= document.getElementById("name"),
+    actEl = document.getElementById("act"),
+    cueEl = document.getElementById("cue"),
+    pad   = document.getElementById("pad"),
+    current = 0;
+
+/* 缺图就退回定妆图 —— 免得七格图还没出的时候页面是空的 */
+img.addEventListener("error", function(){
+  if (img.getAttribute("src") !== FALLBACK) img.setAttribute("src", FALLBACK);
+});
+
+/* ---------- 音效（七格各配什么音，照他 2026-10-11 的原话） ----------
+     · 在想        —— **没有声音**（想事情要安静）
+     · 在写        —— 铅笔写字声，**循环**（干活是持续的）
+     · 摔了        —— 一声滑稽的摔倒
+     · 成一半/全成了 —— 欢快旋律，**程度不一样**（小的短而轻，大的更长、末尾还收一个和弦）
+     · 停了/等你    —— **不要音效**（他补的理由：等你允许的时候本来就有朗读在念，别跟它抢）
+   规矩（项目早先就定死的"不能抢戏"）：**同一时刻只许有一段音在响** —— 换格先把上一段
+   （尤其循环的写字声）掐掉，绝不叠着放。
+   全部**现场合成**，不依赖任何音频文件（只有那句问候用 welcome.wav）。 */
+
+var AC = null, muted = false, soundLog = "还没出声";
+/* 音量都摆在这儿，改一处就行。写字声压得最低：它是**一直响着**的，最容易烦人；
+   一串旋律只响一两秒，可以稍微往前站一点。（2026-10-11 他说写字声再低些，从 0.085 降到 0.045） */
+var VOL = { writing: 0.015, fall: 0.30, cheerSmall: 0.18, cheerBig: 0.26 };
+
+/* 用户自己放的音效（可选）。清单由安装脚本写成 ../sounds/list.js，形如
+   window.GHS_SOUNDS = { "1": "../sounds/writing.wav", "3": "../sounds/fall.mp3" }
+   —— **有文件就用他的，没有就回到下面那套现场合成**，两边都不缺。 */
+var FILE_SOUNDS = window.GHS_SOUNDS || {};
+/* 正在响的音源都登记在这儿 —— 换格时**全部**掐掉，不只是循环那一段。
+   （实测过一次：大成功的尾和弦还没完就切格，会和下一格的声音叠在一起。） */
+var live = [];
+
+function keep(node){
+  live.push(node);
+  node.onended = function () { var i = live.indexOf(node); if (i >= 0) live.splice(i, 1); };
+  return node;
+}
+
+function ac(){
+  if (!AC) { var C = window.AudioContext || window.webkitAudioContext; AC = C ? new C() : null; }
+  if (AC && AC.state === "suspended") { try { AC.resume(); } catch (e) {} }
+  return AC;
+}
+function noiseBuf(c, secs){
+  var n = Math.floor(c.sampleRate * secs), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+  for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  return b;
+}
+function stopSound(){
+  var was = live; live = [];
+  for (var i = 0; i < was.length; i++) { try { was[i].stop(); } catch (e) {} }
+}
+/* 铅笔写字：滤波过的白噪声 + 一点慢速起伏，听着就是"沙沙沙" */
+function startWriting(){
+  var c = ac(); if (!c) return "没有 AudioContext";
+  var src = c.createBufferSource(); src.buffer = noiseBuf(c, 2); src.loop = true;
+  var hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1400;
+  var bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2800; bp.Q.value = 0.9;
+  var g  = c.createGain(); g.gain.value = VOL.writing;    /* 压低：朗读才是主角 */
+  var lfo = c.createOscillator(); lfo.type = "sawtooth"; lfo.frequency.value = 7.5;
+  var lg = c.createGain(); lg.gain.value = VOL.writing * 0.6;   /* 那点"沙沙"的起伏，跟着主音量走 */
+  lfo.connect(lg); lg.connect(g.gain);
+  src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(c.destination);
+  keep(src); keep(lfo);
+  src.start(); lfo.start();
+  return "铅笔写字声（循环）";
+}
+/* 摔了：先"咻"地滑下去，再"咚"一下坐地上 */
+function playFall(){
+  var c = ac(); if (!c) return "没有 AudioContext";
+  var t = c.currentTime;
+  var o = c.createOscillator(); o.type = "triangle";
+  o.frequency.setValueAtTime(760, t);
+  o.frequency.exponentialRampToValueAtTime(110, t + 0.42);
+  var g = c.createGain();
+  g.gain.setValueAtTime(VOL.fall, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+  o.connect(g); g.connect(c.destination); keep(o); o.start(t); o.stop(t + 0.55);
+
+  var n = c.createBufferSource(); n.buffer = noiseBuf(c, 0.3);
+  var lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 300;
+  var ng = c.createGain();
+  ng.gain.setValueAtTime(0.38, t + 0.34);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.62);
+  n.connect(lp); lp.connect(ng); ng.connect(c.destination); keep(n); n.start(t + 0.34); n.stop(t + 0.7);
+  return "摔倒声（一声）";
+}
+/* 成功：一串上行音；big=true 更长、末尾再收一个和弦 */
+function playCheer(big){
+  var c = ac(); if (!c) return "没有 AudioContext";
+  var t0 = c.currentTime;
+  var notes = big ? [523, 659, 784, 1047, 1319] : [523, 659, 784];
+  for (var i = 0; i < notes.length; i++) {
+    (function (f, i) {
+      var t = t0 + i * (big ? 0.13 : 0.11);
+      var o = c.createOscillator(); o.type = "triangle"; o.frequency.value = f;
+      var g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(big ? VOL.cheerBig : VOL.cheerSmall, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (big ? 0.55 : 0.32));
+      o.connect(g); g.connect(c.destination); keep(o); o.start(t); o.stop(t + 0.7);
+    })(notes[i], i);
+  }
+  if (big) {
+    [523, 659, 784, 1047].forEach(function (f) {
+      var t = t0 + 0.75;
+      var o = c.createOscillator(); o.type = "sine"; o.frequency.value = f;
+      var g = c.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+      o.connect(g); g.connect(c.destination); keep(o); o.start(t); o.stop(t + 1.2);
+    });
+  }
+  return big ? "大成功的欢快旋律" : "小成功的欢快旋律";
+}
+
+/* 哪格配什么音 —— 改这一张表就够了 */
+/* 放用户自己的音效文件（循环那格就 loop） */
+function playFile(src, loop){
+  try {
+    var a = new Audio(src);
+    a.loop = !!loop;
+    a.volume = loop ? 0.5 : 0.85;
+    live.push(a);
+    var p = a.play();
+    if (p && p.then) p.catch(function () {});
+    return "用他自己的音效：" + src;
+  } catch (e) { return "他自己的音效播不动：" + e; }
+}
+
+function soundFor(n){
+  stopSound();                       /* ★ 先掐上一段，绝不叠 */
+  if (muted) return "（静音开着）";
+  if (FILE_SOUNDS[String(n)]) return playFile(FILE_SOUNDS[String(n)], n === 1);
+  try {
+    if (n === 1) return startWriting();
+    if (n === 3) return playFall();
+    if (n === 6) return playCheer(false);
+    if (n === 7) return playCheer(true);
+  } catch (e) { return "出错：" + e; }
+  return "（这格不出声）";
+}
+
+function setState(n){
+  var s = STATES[n] || STATES[2];
+  /* 先归零再设值，动画才会从头播一遍 */
+  stage.dataset.state = "0";
+  void stage.offsetWidth;
+  stage.dataset.state = String(n);
+
+  img.setAttribute("src", "../states/" + (n<10?"0"+n:n) + ".png");
+  nameEl.textContent = s.name;
+  actEl.textContent  = s.act;
+  cueEl.innerHTML    = s.cue ? "我说：<b>" + s.cue + "</b>" : "";
+  current = n;
+  soundLog = soundFor(n) + (AC ? "（音频 " + AC.state + "）" : "");
+
+  Array.prototype.forEach.call(pad.querySelectorAll("button"), function(b){
+    b.setAttribute("aria-pressed", String(+b.dataset.s === n));
+  });
+}
+
+/* 按钮 */
+Object.keys(STATES).forEach(function(k){
+  var n = +k, b = document.createElement("button");
+  b.textContent = STATES[n].name; b.dataset.s = n;
+  b.addEventListener("click", function(){ setState(n); });
+  pad.appendChild(b);
+});
+
+/* ---------- 启动问候：挥手 + 气泡 + 那句问候音 ---------- */
+/* 每启动一次只演一回（浮窗在页面加载完时调一次 welcome()）。
+   音频播的是 assets/welcome.wav —— 他的克隆声、1.94 秒，**文件**，不是运行期现生成的
+   （规格里那句「正常运行绝对不调用 VoiceStudio」就是这个意思）。 */
+var WELCOME_LINE  = "嗨，今天想干麻？";
+/* 欢迎音：**挨个试**几种格式 —— 用户丢进来的可能是 mp3、m4a，不必逼他转格式。
+   （装的时候安装脚本会把他的音频拷进 app 并保持原来的扩展名。） */
+var WELCOME_TRIES = ["../welcome.wav", "../welcome.mp3", "../welcome.m4a", "../welcome.aiff"];
+var WELCOME_IMG   = "../states/welcome.png"; /* 将来有专门的挥手图就用它，没有就退回定妆图 */
+
+function welcome(){
+  document.getElementById("bubble").textContent = WELCOME_LINE;
+  stage.dataset.state = "0";             /* 先把七格那套动画停掉，这一会儿只挥手 */
+  img.setAttribute("src", WELCOME_IMG);  /* 404 不要紧，error 会退回定妆图 */
+  document.body.classList.add("welcome");
+  stopSound();                           /* 打招呼时不放状态音，别两句音叠一起 */
+  /* 播成没播成，回报一句给浮窗，它会写进日志 —— 不然"声音到底响没响"没法核 */
+  window.ghs.welcomeStatus = "还没开始";
+  playWelcome(0);
+}
+
+/* 从第一个格式开始试；这个文件不存在或播不动，就试下一个。
+   全都没有 ⇒ 静音打招呼（画面照常挥手、气泡照常弹），并在日志里说清楚"是没放音频"。 */
+function playWelcome(i){
+  if (i >= WELCOME_TRIES.length) {
+    window.ghs.welcomeStatus = "没有欢迎音频（把自己的录音放进 voice 文件夹就会响）";
+    return;
+  }
+  try{
+    var a = new Audio(WELCOME_TRIES[i]);
+    a.volume = 0.95;
+    var p = a.play();
+    if(p && p.then){
+      p.then(function(){ window.ghs.welcomeStatus = "播了：" + WELCOME_TRIES[i]; },
+             function(){ playWelcome(i + 1); });
+    }else{
+      window.ghs.welcomeStatus = "播了：" + WELCOME_TRIES[i] + "（老式回报）";
+    }
+  }catch(e){
+    playWelcome(i + 1);
+  }
+}
+
+function welcomeEnd(){
+  document.body.classList.remove("welcome");
+  soundLog = "（问候期间不出状态音）";
+  setState(2);
+}
+
+/* ★ 浮窗认的唯一入口（跟演示页同一套契约，外面的程序只认这几个方法） */
+window.ghs = {
+  set: function(n){ try{ setState(n); }catch(e){} },
+  now: function(){ return current; },
+  welcome: function(){ try{ welcome(); }catch(e){ window.ghs.welcomeStatus = "出错：" + e; } },
+  /* 声音这东西我看不见，只能让页面回报 —— 浮窗会把这一行写进日志 */
+  sound: function(){ return soundLog; },
+  mute: function(v){ muted = !!v; if (muted) stopSound(); return muted; },
+  welcomeEnd: function(){ try{ welcomeEnd(); }catch(e){} },
+  ready: true
+};
+
+/* 小窗模式：URL 带 ?compact，或者窗口本来就很小。
+   ★ 打包进浮窗时 build.sh 会把下面这行的 false 改成 true ——
+     file:// 带查询串在 WKWebView 上不稳（实测过），写死最省心；
+     而"窗口本来就很小"这条也不能当唯一依据（边长是可配的）。 */
+var FORCE_COMPACT = true;
+if (FORCE_COMPACT || location.search.indexOf("compact") >= 0 || Math.min(innerWidth,innerHeight) < 480){
+  document.body.classList.add("compact");
+}
+setState(2);
+/* ★ 预热音频上下文：第一次进"在写"时它可能还是 suspended —— 那种情况下**是真没声的**，
+   日志里看得见。页面一加载就先碰一下，等真要用时它已经在跑了。 */
+ac();
+</script>
+</body>
+</html>
