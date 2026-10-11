@@ -79,9 +79,8 @@ print(len(rows), jit)
 PY
 )
   RATIO=$(( JITTER * 100 / (TOTAL > 0 ? TOTAL : 1) ))
-  if [ "${TOTAL}" -lt 50 ]; then :          # 样本太少不算异常：刚重启/用得不多的日子会这样，别瞎喊
-
-  if [ "${RATIO}" -lt 25 ]; then OK+=("状态切换 ${TOTAL} 次，其中挨得近的 ${JITTER} 次（${RATIO}%）—— 不抖")
+  # 样本太少（刚重启、用得不多的日子）不算异常，直接跳过，别瞎喊
+  if [ "${TOTAL}" -ge 50 ] && [ "${RATIO}" -lt 25 ]; then OK+=("状态切换 ${TOTAL} 次，其中挨得近的 ${JITTER} 次（${RATIO}%）—— 不抖")
   else NOTE+=("状态切换 ${TOTAL} 次里有 ${JITTER} 次挨得极近（${RATIO}%）—— 有点抖，翻日志看看是不是误报"); fi
 fi
 
